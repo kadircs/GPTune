@@ -18,7 +18,21 @@ works, and perform publicly and display publicly, and to permit other to do so.
 *GPTune* is an autotuning framework that relies on multitask and transfer learnings to help solve the underlying black-box optimization problem.
 GPTune is part of the xSDK4ECP effort supported by the Exascale Computing Project (ECP).
 
-## Dependency
+
+## Installation using example scripts
+The following example build scripts are available for a collection of tested systems. 
+
+### Ubuntu/Debian-like systems supporting apt-get
+The following script installs everything from scratch and can take up to 2 hours depending on the users' machine specifications. If "MPIFromSource=0", you need to set PATH, LIBRARY_PATH, LD_LIBRARY_PATH and MPI compiler wrappers when prompted.
+
+### Mac OS supporting homebrew
+The following script installs everything from scratch and can take up to 2 hours depending on the users' machine specifications. The user may need to set pythonversion, gccversion, openblasversion, lapackversion on the top of the script to the versions supported by your homebrew software. 
+
+### NERSC Cori
+The following script installs GPTune with mpi, python, compiler and cmake modules on Cori. Note that you can set "proc=haswell or knl", "mpi=openmpi or craympich" and "compiler=gnu or intel". Setting mpi=craympich will limit certain GPTune features. Particularly, only the so-called reverse communication interface (RCI) mode can be used, please refer to the user guide for details https://github.com/gptune/GPTune/blob/master/Doc/GPTune_UsersGuide.pdf.
+
+
+## Installation from scratch
 GPTune relies on OpenMPI (4.0 or higher), Python (3.7 or higher), BLAS/LAPACK, SCALAPACK (2.1.0 or higher), mpi4py, scikit-optimize and autotune, which need to be installed by the user. In what follows, we assume OpenMPI, Python, BLAS/LAPACK have been installed (with the same compiler version):
 ```
 export MPICC=path-to-c-compiler-wrapper
@@ -33,7 +47,7 @@ export GPTUNEROOT=path-to-gptune-root-directory
 The rest can be installed as follows:
 
 
-## Install SCALAPACK
+### Install SCALAPACK
 ```
 cd $GPTUNEROOT
 wget http://www.netlib.org/scalapack/scalapack-2.1.0.tgz
@@ -59,7 +73,7 @@ export SCALAPACK_LIB="$PWD/install/lib/libscalapack.so"
 ```
 
 
-## Install mpi4py
+### Install mpi4py
 ```
 cd $GPTUNEROOT
 git clone https://github.com/mpi4py/mpi4py.git
@@ -69,7 +83,7 @@ python setup.py install --user
 export PYTHONPATH=$PYTHONPATH:$PWD
 ```
 
-## Install scikit-optimize
+### Install scikit-optimize
 ```
 cd $GPTUNEROOT
 git clone https://github.com/scikit-optimize/scikit-optimize.git
@@ -78,17 +92,18 @@ pip install --user -e .
 export PYTHONPATH=$PYTHONPATH:$PWD
 ```
 
-## Install autotune
+### Install autotune
 autotune contains a common autotuning interface used by GPTune and ytopt. It can be installed as follows:
 ```
 cd $GPTUNEROOT
 git clone https://github.com/ytopt-team/autotune.git
 cd autotune/
+cp ../patches/autotune/problem.py autotune/.
 pip install --user -e .
 export PYTHONPATH=$PYTHONPATH:$PWD
 ```
 
-## Install GPTune
+### Install GPTune
 GPTune also depends on several external Python libraries as listed in the `requirements.txt` file, including numpy, scikit-learn, scipy, pyaml, matplotlib, GPy, openturns,lhsmdu, ipyparallel, opentuner, hpbandster, and pygmo. These Python libraries can all be installed through the standard Python repository through the pip tool.
 ```
 cd $GPTUNEROOT
@@ -116,20 +131,23 @@ cp lib_gptuneclcm.so ../.
 ```
 
 ## Examples
-There are a few examples included in GPTune
-### demo
-The file `demo.py` in the `examples` folder shows how to describe the autotuning problem for a sequential objective function and how to invoke GPTune 
+There are a few examples included in GPTune, each example is located in a seperate directory ./examples/[application_name]. The user needs to edit examples/[application_name]/.gptune/meta.json to define machine information and software dependency, before running the tuning examples. 
+
+Please take a look at the following two scripts to run the complete examples. 
+https://github.com/gptune/GPTune/blob/master/run_examples.sh
+https://github.com/gptune/GPTune/blob/master/run_ppopp.sh
+
+### GPTune-Demo
+The file `demo.py` in the `examples/GPTune-Demo` folder shows how to describe the autotuning problem for a sequential objective function and how to invoke GPTune 
 ```
-cd $GPTUNEROOT/examples
+cd $GPTUNEROOT/examples/GPTune-Demo
 $MPIRUN -n 1 python ./demo.py
 ```
 ### SCALAPCK QR
-The files `scalapack_*.py` in the `examples` folder shows how to tune the parallel QR factorization subroutine PDGEQRF with different features of GPTune. 
+The files `scalapack_*.py` in the `examples/Scalapack-PDGEQRF` folder shows how to tune the parallel QR factorization subroutine PDGEQRF with different features of GPTune. 
 ```
-cd $GPTUNEROOT/examples
-cp ../build/pdqrdriver ../.
-export PYTHONPATH=$PYTHONPATH:$PWD/scalapack-driver/spt/
-$MPIRUN -n 1  python ./scalapack_MLA.py -mmax 1000 -nmax 1000 -nodes 1 -cores 4 -nprocmin_pernode 1 -ntask 2 -nrun 20 -machine yourmachine -optimization 'GPTune'
+cd $GPTUNEROOT/examples/Scalapack-PDGEQRF
+$MPIRUN -n 1  python ./scalapack_MLA.py -mmax 1000 -nmax 1000 -nprocmin_pernode 1 -ntask 2 -nrun 20 -optimization 'GPTune'
 ```
 ### SuperLU_DIST
 First, SuperLU_DIST needs to be installed with the same OpenMPI and BLAS/LAPACK as the above.
@@ -163,10 +181,10 @@ cmake .. \
     -DTPL_PARMETIS_LIBRARIES=$PARMETIS_LIBRARIES
 make pddrive_spawn 
 ```
-Note that `pddrive_spawn` is a modified application driver that will be launched by GPTune via MPI spawning (see the Usage section). The files `superlu_*.py` in the `examples` folder shows how to tune the performance of sparse LU factorization with different features of GPTune. 
+Note that `pddrive_spawn` is a modified application driver that will be launched by GPTune via MPI spawning (see the Usage section). The files `superlu_*.py` in the `examples/SuperLU_DIST` folder shows how to tune the performance of sparse LU factorization with different features of GPTune. 
 ```
-cd $GPTUNEROOT/examples
-$MPIRUN -n 1 python ./superlu_MLA_MO.py  -nodes 1 -cores 4 -nprocmin_pernode 1 -ntask 1 -nrun 10 -machine youmachine -optimization 'GPTune'
+cd $GPTUNEROOT/examples/SuperLU_DIST
+$MPIRUN -n 1 python ./superlu_MLA_MO.py -nprocmin_pernode 1 -ntask 1 -nrun 10 -optimization 'GPTune'
 ```
 
 
